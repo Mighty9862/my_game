@@ -53,6 +53,19 @@ services:
       - "8500:8500"
     networks:
       - appnet
+  
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: mygame-client
+    restart: unless-stopped
+    ports:
+      - "3500:3500"  # Изменено с 80 на 3400
+    depends_on:
+      - app
+    networks:
+      - appnet
 
 volumes:
   postgres_data:
