@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mygame-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mygame
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d mygame"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - appnet
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mygame-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Подключение к БД - ВНУТРИ контейнера используем порт 5432
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/mygame
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+
+      # CORS settings
+      SPRING_MVC_CORS_ALLOWED_ORIGINS: "*"
+      SPRING_MVC_CORS_ALLOWED_METHODS: "GET,POST,PUT,DELETE,OPTIONS,PATCH"
+      SPRING_MVC_CORS_ALLOWED_HEADERS: "*"
+
+      # Swagger
+      SPRINGDOC_API_DOCS_PATH: /api-docs
+      SPRINGDOC_SWAGGER_UI_PATH: /swagger-ui.html
+      SPRINGDOC_SWAGGER_UI_ENABLED: "true"
+
+      # Порт приложения
+      SERVER_PORT: "8500"
+
+    ports:
+      - "8500:8500"
+    networks:
+      - appnet
+
+volumes:
+  postgres_data:
+
+networks:
+  appnet:
+    driver: bridge
